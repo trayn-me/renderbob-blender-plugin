@@ -1,0 +1,17 @@
+schema_version = "1.0.0"
+
+id = "renderbob"
+version = "0.2.0"
+name = "RenderBob"
+tagline = "Submit and monitor RenderBob cloud renders from Blender"
+maintainer = "RenderBob Team"
+type = "add-on"
+
+website = "https://renderbob.trayn.me"
+
+blender_version_min = "4.2.0"
+license = ["SPDX:MIT"]
+
+[permissions]
+network = "Connect to RenderBob APIs and upload render scenes"
+files = "Package scenes, cache uploads, and download outputs"

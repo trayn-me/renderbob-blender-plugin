@@ -1,0 +1,12 @@
+dist/
+__pycache__/
+.DS_Store
+*.log
+*.pyc
+*.pyo
+*.pyd
+*.pyw
+*.pyz
+*.pywz
+*.pyzw
+*.pyzwz
