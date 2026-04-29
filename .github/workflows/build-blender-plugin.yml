@@ -51,6 +51,10 @@ jobs:
           bumped_version_tuple = (major, minor, patch + 1)
           version_tuple = ", ".join(str(part) for part in bumped_version_tuple)
           version = ".".join(str(part) for part in bumped_version_tuple)
+          github_env_path = os.getenv("GITHUB_ENV")
+          if github_env_path:
+              with open(github_env_path, "a", encoding="utf-8") as github_env_file:
+                  github_env_file.write(f"RENDERBOB_ADDON_VERSION={version}\n")
 
           init_text = re.sub(
               r'("version"\s*:\s*)\((\d+)\s*,\s*(\d+)\s*,\s*(\d+)\)',
@@ -109,6 +113,6 @@ jobs:
           AWS_REGION: eu-central-1
           AWS_S3_BUCKET_NAME: ${{ vars.AWS_S3_BUCKET_NAME }}
         run: |
-          aws s3 cp ./renderbob-addon.zip s3://$AWS_S3_BUCKET_NAME/addons/blender/renderbob-blender-plugin.zip --region $AWS_REGION
+          aws s3 cp ./renderbob-addon.zip s3://$AWS_S3_BUCKET_NAME/addons/blender/renderbob-blender-plugin-$RENDERBOB_ADDON_VERSION.zip --region $AWS_REGION
         shell: bash
 
