@@ -18,8 +18,83 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v6
         with:
-          python-version: '3.12'
-          cache: 'pip'
+          # Match Blender 4.2's bundled Python for compatible .pyc bytecode.
+          python-version: '3.11'
+
+      - name: Fill addon constants and manifest
+        env:
+          RENDERBOB_API_BASE_URL: ${{ vars.RENDERBOB_API_BASE_URL }}
+          RENDERBOB_FRONTEND_BASE_URL: ${{ vars.RENDERBOB_FRONTEND_BASE_URL }}
+          RENDERBOB_WEBSITE_URL: ${{ vars.RENDERBOB_WEBSITE_URL }}
+        run: |
+          python3 - <<'PY'
+          import os
+          import re
+          from pathlib import Path
+
+          root = Path(".")
+          plugin_init_path = root / "renderbob_plugin" / "__init__.py"
+          constants_path = root / "renderbob_plugin" / "constants.py"
+          manifest_path = root / "blender_manifest.toml"
+
+          api_url = os.getenv("RENDERBOB_API_BASE_URL", "").strip() or "https://api.renderbob.trayn.me"
+          frontend_url = os.getenv("RENDERBOB_FRONTEND_BASE_URL", "").strip() or "https://renderbob.trayn.me"
+          website_url = os.getenv("RENDERBOB_WEBSITE_URL", "").strip() or frontend_url
+
+          # Developer controls major/minor in source; CI increments patch for builds.
+          init_text = plugin_init_path.read_text(encoding="utf-8")
+          m = re.search(r'"version"\s*:\s*\((\d+)\s*,\s*(\d+)\s*,\s*(\d+)\)', init_text)
+          if not m:
+              raise RuntimeError("Could not determine add-on version from renderbob_plugin/__init__.py")
+          major, minor, patch = (int(part) for part in m.groups())
+          bumped_version_tuple = (major, minor, patch + 1)
+          version_tuple = ", ".join(str(part) for part in bumped_version_tuple)
+          version = ".".join(str(part) for part in bumped_version_tuple)
+
+          init_text = re.sub(
+              r'("version"\s*:\s*)\((\d+)\s*,\s*(\d+)\s*,\s*(\d+)\)',
+              rf'\1({version_tuple})',
+              init_text,
+              count=1,
+          )
+          plugin_init_path.write_text(init_text, encoding="utf-8")
+
+          constants_text = constants_path.read_text(encoding="utf-8")
+          constants_text = re.sub(
+              r'^ADDON_VERSION\s*=\s*\([^)]+\)',
+              f"ADDON_VERSION = ({version_tuple})",
+              constants_text,
+              flags=re.MULTILINE,
+          )
+          constants_text = re.sub(
+              r'^DEFAULT_API_BASE_URL\s*=.*$',
+              f'DEFAULT_API_BASE_URL = "{api_url}"',
+              constants_text,
+              flags=re.MULTILINE,
+          )
+          constants_text = re.sub(
+              r'^DEFAULT_FRONTEND_BASE_URL\s*=.*$',
+              f'DEFAULT_FRONTEND_BASE_URL = "{frontend_url}"',
+              constants_text,
+              flags=re.MULTILINE,
+          )
+          constants_path.write_text(constants_text, encoding="utf-8")
+
+          manifest_text = manifest_path.read_text(encoding="utf-8")
+          manifest_text = re.sub(
+              r'^version\s*=\s*".*"$',
+              f'version = "{version}"',
+              manifest_text,
+              flags=re.MULTILINE,
+          )
+          manifest_text = re.sub(
+              r'^website\s*=\s*".*"$',
+              f'website = "{website_url}"',
+              manifest_text,
+              flags=re.MULTILINE,
+          )
+          manifest_path.write_text(manifest_text, encoding="utf-8")
+          PY
 
       - name: Package addon
         working-directory: scripts
