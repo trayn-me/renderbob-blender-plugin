@@ -2,7 +2,7 @@ from pathlib import Path
 
 import bpy
 
-from ..constants import ADDON_ID
+from ..context import get_addon_preferences
 from ..job_lifecycle import (
     render_panel_phase_from_context,
     should_allow_terminate_job,
@@ -112,8 +112,11 @@ class RENDERBOB_OT_download_job_logs(bpy.types.Operator):
             self.report({"ERROR"}, "No log download URL returned by backend")
             return {"CANCELLED"}
 
-        addon_prefs = context.preferences.addons[ADDON_ID].preferences
-        out_dir = Path(bpy.path.abspath(addon_prefs.download_path or "//"))
+        addon_prefs = get_addon_preferences(context)
+        download_path = (
+            (addon_prefs.download_path or "//") if addon_prefs is not None else "//"
+        )
+        out_dir = Path(bpy.path.abspath(download_path or "//"))
         out_dir.mkdir(parents=True, exist_ok=True)
         out_path = out_dir / f"renderbob-{public_id}-renderbob.log"
         success, error = download_from_url(str(url), out_path)
@@ -207,8 +210,11 @@ class RENDERBOB_OT_download_output(bpy.types.Operator):
             self.report({"ERROR"}, "No download URL returned by backend")
             return {"CANCELLED"}
 
-        addon_prefs = context.preferences.addons[ADDON_ID].preferences
-        out_dir = bpy.path.abspath(addon_prefs.download_path or "//")
+        addon_prefs = get_addon_preferences(context)
+        download_path = (
+            (addon_prefs.download_path or "//") if addon_prefs is not None else "//"
+        )
+        out_dir = bpy.path.abspath(download_path or "//")
         out_path = Path(out_dir) / Path(file_name).name
         success, error = download_from_url(url, out_path)
         if not success:
