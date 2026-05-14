@@ -1,7 +1,7 @@
 bl_info = {
     "name": "RenderBob",
     "author": "RenderBob Team",
-    "version": (0, 4, 0),
+    "version": (0, 5, 0),
     "blender": (4, 2, 0),
     "location": "View3D > Sidebar > RenderBob",
     "description": "Submit and monitor RenderBob render jobs",

@@ -2,10 +2,15 @@ import json
 from dataclasses import dataclass
 from typing import Any, Dict, Optional
 from urllib.error import HTTPError, URLError
-from urllib.parse import urlencode, urlparse, parse_qsl, urlunparse
+from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 
-from .constants import DEFAULT_API_BASE_URL
+from .constants import ADDON_NAME, ADDON_VERSION, DEFAULT_API_BASE_URL
+
+
+def _user_agent() -> str:
+    major, minor, patch = ADDON_VERSION
+    return f"{ADDON_NAME}/{major}.{minor}.{patch} (Blender)"
 
 
 @dataclass
@@ -48,27 +53,24 @@ class RenderBobClient:
         if payload is not None:
             body = json.dumps(payload).encode("utf-8")
 
-        headers = {
-            "Content-Type": "application/json",
+        headers: Dict[str, str] = {
             "Accept": "application/json",
+            "User-Agent": _user_agent(),
         }
+        if body is not None:
+            headers["Content-Type"] = "application/json"
+
         token_type = self._token_type(self.api_token)
         if token_type == "api":
+            # Match typical clients (e.g. Postman): RB2 keys use x-api-token only.
+            # Avoid GET + Content-Type: application/json and avoid Python-urllib UA (often 403 at edge).
             headers["x-api-token"] = self.api_token
-            headers["Authorization"] = f"Bearer {self.api_token}"
         elif self.api_token:
-            # Support direct bearer/JWT usage when users paste auth tokens.
             headers["Authorization"] = f"Bearer {self.api_token}"
 
         last_error = ApiResponse(False, 0, {}, "Request failed")
         for candidate_path in self._candidate_paths(path):
             request_url = f"{self.base_url}{candidate_path}"
-            if token_type == "api":
-                request_url = self._append_query_param(
-                    request_url,
-                    "api_token",
-                    self.api_token,
-                )
 
             result = self._request_once(method, request_url, headers, body)
             if result.ok:
@@ -117,23 +119,6 @@ class RenderBobClient:
         if token.startswith("RB2-"):
             return "api"
         return "bearer"
-
-    @staticmethod
-    def _append_query_param(url: str, key: str, value: str) -> str:
-        parsed = urlparse(url)
-        query_pairs = dict(parse_qsl(parsed.query, keep_blank_values=True))
-        query_pairs[key] = value
-        updated_query = urlencode(query_pairs)
-        return urlunparse(
-            (
-                parsed.scheme,
-                parsed.netloc,
-                parsed.path,
-                parsed.params,
-                updated_query,
-                parsed.fragment,
-            )
-        )
 
     def _candidate_paths(self, path: str) -> list[str]:
         normalized = path if path.startswith("/") else f"/{path}"

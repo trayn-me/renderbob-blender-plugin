@@ -19,7 +19,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v6
         with:
-          # Match Blender 4.2's bundled Python for compatible .pyc bytecode.
+          # Used for manifest/constants patching only; the add-on zip ships .py source.
           python-version: '3.11'
 
       - name: Fill addon constants and manifest

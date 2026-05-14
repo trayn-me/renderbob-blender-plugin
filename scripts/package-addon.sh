@@ -11,28 +11,19 @@ rm -f "$ZIP_PATH"
 rm -rf "$BUILD_DIR"
 mkdir -p "$BUILD_DIR/renderbob_plugin"
 
-# Keep only the root __init__.py in source form (for Blender metadata), and
-# package the internal plugin package as bytecode-only to make casual reading harder.
+# Ship source .py only. Do NOT compile with system `python3` and strip sources:
+# Blender bundles its own Python (e.g. 3.11 in 4.2.x); .pyc from another minor
+# version causes "bad magic number" on import (e.g. b'\\xcb\\r\\r\\n').
 cp "$ROOT_DIR/__init__.py" "$BUILD_DIR/__init__.py"
 cp "$ROOT_DIR/blender_manifest.toml" "$BUILD_DIR/blender_manifest.toml"
 cp -R "$ROOT_DIR/renderbob_plugin/." "$BUILD_DIR/renderbob_plugin/"
 
-PYTHON_BIN="${PYTHON_BIN:-python3}"
-"$PYTHON_BIN" -m compileall -q -b "$BUILD_DIR/renderbob_plugin"
-BUILD_DIR="$BUILD_DIR" "$PYTHON_BIN" - <<'PY'
-import os
-import pathlib
-import shutil
-
-build_dir = pathlib.Path(os.environ["BUILD_DIR"])
-plugin_dir = build_dir / "renderbob_plugin"
-
-for source_file in plugin_dir.rglob("*.py"):
-    source_file.unlink()
-
-for pycache_dir in build_dir.rglob("__pycache__"):
-    shutil.rmtree(pycache_dir, ignore_errors=True)
-PY
+# Never bundle stray bytecode from a dev machine.
+find "$BUILD_DIR" -type d -name '__pycache__' 2>/dev/null | while read -r d; do
+  rm -rf "$d"
+done
+find "$BUILD_DIR" -name '*.pyc' -delete 2>/dev/null || true
+find "$BUILD_DIR" -name '*.pyo' -delete 2>/dev/null || true
 
 (
   cd "$BUILD_DIR"
@@ -40,7 +31,9 @@ PY
     "__init__.py" \
     "blender_manifest.toml" \
     "renderbob_plugin" \
-    -x "*/__pycache__/*"
+    -x "*/__pycache__/*" \
+    -x "*.pyc" \
+    -x "*.pyo"
 )
 
 echo "Packaged addon at: $ZIP_PATH"

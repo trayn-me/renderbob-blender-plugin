@@ -9,6 +9,7 @@ from .state import STATE
 
 
 def tag_renderbob_sidebar_redraw() -> None:
+    """Redraw 3D Viewport sidebars where RenderBob lives."""
     try:
         for window in bpy.context.window_manager.windows:
             for area in window.screen.areas:
