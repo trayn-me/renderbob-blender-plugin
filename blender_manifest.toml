@@ -1,7 +1,7 @@
 schema_version = "1.0.0"
 
 id = "renderbob"
-version = "0.5.0"
+version = "0.5.1"
 name = "RenderBob"
 tagline = "Submit and monitor RenderBob cloud renders from Blender"
 maintainer = "RenderBob Team"
