@@ -6,6 +6,9 @@ on:
       - main
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   build-and-upload:
     runs-on: ubuntu-latest
@@ -100,6 +103,18 @@ jobs:
           )
           manifest_path.write_text(manifest_text, encoding="utf-8")
           PY
+
+      - name: Commit version bump
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add renderbob_plugin/__init__.py renderbob_plugin/constants.py blender_manifest.toml
+          if git diff --staged --quiet; then
+            echo "No version or manifest changes to commit."
+            exit 0
+          fi
+          git commit -m "chore: bump addon version to ${RENDERBOB_ADDON_VERSION}"
+          git push origin "HEAD:${GITHUB_REF_NAME}"
 
       - name: Package addon
         working-directory: scripts
